@@ -3,11 +3,14 @@
 #include "Eigen/Dense"
 #include "tools.h"
 
+using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::cout;
 using std::endl;
 using std::vector;
+
+Tools tools;
 
 /**
  * Constructor.
@@ -37,9 +40,17 @@ FusionEKF::FusionEKF() {
    * TODO: Set the process and measurement noises
    */
 
+  //VectorXd x = VectorXd(4);
+  //x << 0.0, 0.0, 1.0, 1.0;
+
   H_laser_ << 1, 0, 0, 0,
               0, 1, 0, 0;
 
+  /*
+  Hj_ << 1, 1, 0, 0,
+         1, 1, 0, 0,
+         1, 1, 1, 1;
+  */
   ekf_.P_ = MatrixXd(4, 4);
   ekf_.P_ << 1, 0, 0, 0,
              0, 1, 0, 0,
@@ -47,13 +58,15 @@ FusionEKF::FusionEKF() {
              0, 0, 0, 1000;
 
   ekf_.F_ = MatrixXd(4, 4);
-  eke_.F_ << 1, 0, 1, 0;
+  ekf_.F_ << 1, 0, 1, 0,
              0, 1, 0, 1,
              0, 0, 1, 0,
              0, 0, 0, 1;
-
+  
+    // set measurement noises
   noise_ax = 9;
   noise_ay = 9;
+
 }
 
 /**
@@ -83,18 +96,25 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
         float rho = measurement_pack.raw_measurements_[0];
         float phi = measurement_pack.raw_measurements_[1];
         float rho_dot = measurement_pack.raw_measurements_[2];
-
+        float px = rho * cos(phi);
+      	float py = rho * sin(phi);
+		
+      	if (px != 0 && py !=0)      //avooid Jaboian
+        	ekf_.x_ << rho * cos(phi), rho * sin(phi), 0, 0;  // x, y, vx, vy
+      /*
         ekf_.x_(0) = rho * cos(phi);
         ekf_.x_(1) = rho * sin(phi);
         ekf_.x_(2) = rho_dot * cos(phi);
         ekf_.x_(3) = rho_dot * sin(phi);
+      */
 
-
-    }
-    else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
+    } else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       // TODO: Initialize state.
-        ekf_.x_(0) = measurement_pack.raw_measurements_(0);
-        ekf_.x_(1) = measurement_pack.raw_measurements_(1);
+
+      //  ekf_.x_(0) = measurement_pack.raw_measurements_[0];
+      //  ekf_.x_(1) = measurement_pack.raw_measurements_[1];
+
+       ekf_.x_ << measurement_pack.raw_measurements_[0], measurement_pack.raw_measurements_[1], 0, 0; // x, y, vx, vy
 
     }
 
@@ -123,18 +143,20 @@ float dt_2 = dt * dt;
 float dt_3 = dt_2 * dt;
 float dt_4 = dt_3 * dt;
 
-ekf_.F(0, 2) = dt;
-ekf_.F(1, 3) = dt;
+ekf_.F_(0, 2) = dt;
+ekf_.F_(1, 3) = dt;
 
+//float noise_ax = 9;
+//float noise_ay = 9;
 
 ekf_.Q_ = MatrixXd(4, 4);
 ekf_.Q_ << dt_4/4*noise_ax, 0,                dt_3/2*noise_ax, 0,
-           0,             , dt_4/4*noise_ay,  0,               dt_3/2*noise_ay,
+           0,               dt_4/4*noise_ay,  0,               dt_3/2*noise_ay,
            dt_3/2*noise_ax, 0,                dt_2*noise_ax,   0,
            0,               dt_3/2*noise_ay,  0,               dt_2*noise_ay;
 
 
-  ekf_.Predict();
+ekf_.Predict();
 
   /**
    * Update
@@ -147,18 +169,20 @@ ekf_.Q_ << dt_4/4*noise_ax, 0,                dt_3/2*noise_ax, 0,
    */
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    
     // TODO: Radar updates
-
-    H_jaconbian = tools.CalculateJacobian(ekf_.x_);
-    ekf_.H_ = H_jaconbian;
+    Hj_ = tools.CalculateJacobian(ekf_.x_);
+    ekf_.H_ = Hj_;
     ekf_.R_ = R_radar_;
     ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+  
   } else {
+   
     // TODO: Laser updates
-
     ekf_.H_ = H_laser_;
     ekf_.R_ = R_laser_;
     ekf_.Update(measurement_pack.raw_measurements_);
+  
   }
 
   // print the output
