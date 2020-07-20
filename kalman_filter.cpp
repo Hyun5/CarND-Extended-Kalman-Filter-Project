@@ -46,13 +46,12 @@ void KalmanFilter::Update(const VectorXd &z) {
   MatrixXd Si = S.inverse();
   MatrixXd K = PHt * Si;
 
+  //new estimate
   x_ = x_ + (K * y);
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_) * P_;
-
 }
-
 
 VectorXd RadarCartesianToPolar(const VectorXd &x_state){
   /*
@@ -79,9 +78,7 @@ VectorXd RadarCartesianToPolar(const VectorXd &x_state){
   z_pred << rho, phi, rho_dot;
 
   return z_pred;
-
 }
-
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
   /**
@@ -93,13 +90,13 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   VectorXd y = z - z_pred;
 
   // normalize the angle between -pi to pi
-  while(y(1) > M_PI){
-    y(1) -= PI2;
-  }
-
-  while(y(1) < -M_PI){
-    y(1) += PI2;
-  }
+	while ( y(1) > M_PI || y(1) < - M_PI){
+		if( y(1) > M_PI) {
+			y(1) -= M_PI;
+        } else {
+			y(1) += M_PI;
+        }
+  	}
 
   // following is exact the same as in the function of KalmanFilter::Update()
   MatrixXd Ht = H_.transpose();

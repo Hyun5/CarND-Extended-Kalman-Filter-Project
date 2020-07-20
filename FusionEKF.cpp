@@ -62,10 +62,9 @@ FusionEKF::FusionEKF() {
              0, 0, 1, 0,
              0, 0, 0, 1;
   
-    // set measurement noises
+  // set measurement noises
   noise_ax = 9;
   noise_ay = 9;
-
 }
 
 /**
@@ -105,7 +104,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       // TODO: Initialize state.
 
        ekf_.x_ << measurement_pack.raw_measurements_[0], measurement_pack.raw_measurements_[1], 0, 0; // x, y, vx, vy
-
     }
 
     previous_timestamp_ = measurement_pack.timestamp_;
@@ -145,7 +143,6 @@ ekf_.Q_ << dt_4/4*noise_ax, 0,                dt_3/2*noise_ax, 0,
            dt_3/2*noise_ax, 0,                dt_2*noise_ax,   0,
            0,               dt_3/2*noise_ay,  0,               dt_2*noise_ay;
 
-
 ekf_.Predict();
 
   /**
@@ -172,7 +169,6 @@ ekf_.Predict();
     ekf_.H_ = H_laser_;
     ekf_.R_ = R_laser_;
     ekf_.Update(measurement_pack.raw_measurements_);
-  
   }
 
   // print the output
